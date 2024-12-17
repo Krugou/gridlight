@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Grid Lighting Example</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: black;
+      color: white;
+    }
+
+    .grid-item {
+      background-color: #1a1a1a !important;
+      color: white;
+      cursor: pointer;
+    }
+
+    .grid-item.active {
+      background-color: white !important;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+      color: black;
+    }
+
+    .grid-item.adjacent {
+      background-color: #333333 !important;
+      border: white 1px solid;
+    }
+
+    @keyframes flash {
+      0% {
+        background-color: white;
+      }
+
+      50% {
+        background-color: #333333;
+      }
+
+      100% {
+        background-color: white;
+      }
+    }
+
+    .grid-item.flash {
+      animation: flash 0.5s;
+    }
+  </style>
+</head>
+
+<body class="font-sans">
+
+  <h1 class="text-center text-2xl my-4 text-white">Grid Lighting Example</h1>
+
+  <div class="flex justify-center gap-4 mb-4">
+    <input type="number" id="gridSize" value="10" min="1" max="13" class="border p-2 rounded text-black">
+    <button onclick="updateGrid()" class="bg-gray-200 text-black px-4 py-2 rounded">Update Grid</button>
+  </div>
+
+  <div id="gridContainer" class="grid gap-2 w-fit w-3/4 mx-auto">
+    <!-- Grid items will be generated here -->
+  </div>
+
+  <script>
+    let numCols = 6; // Default number of columns
+
+    function updateGrid () {
+      const size = parseInt( document.getElementById( 'gridSize' ).value );
+      numCols = size;
+      const container = document.getElementById( 'gridContainer' );
+      container.className = `grid gap-2 w-fit mx-auto grid-cols-${ size }`;
+
+      // Generate grid items
+      container.innerHTML = '';
+      for ( let i = 0; i < size * size; i++ ) {
+        container.innerHTML += `
+          <div class="grid-item p-4 text-center rounded transition-all duration-300" data-index="${ i }">${ i + 1 }</div>
+        `;
+      }
+
+      // Setup event listeners
+      setupGridEvents();
+    }
+
+    function setupGridEvents() {
+      const gridItems = document.querySelectorAll('.grid-item');
+
+      gridItems.forEach(item => {
+        item.addEventListener('mouseenter', handleHover);
+        item.addEventListener('mouseleave', handleLeave);
+
+        item.addEventListener('click', () => {
+          const index = parseInt(item.dataset.index);
+          const row = Math.floor(index / numCols);
+          const col = index % numCols;
+
+          console.log(`Clicked item index: ${index}, row: ${row}, col: ${col}`);
+
+          // Get all surrounding items (including diagonals)
+          for (let r = -1; r <= 1; r++) {
+            for (let c = -1; c <= 1; c++) {
+              const adjIndex = index + (r * numCols) + c;
+              const adjRow = Math.floor(adjIndex / numCols);
+              const adjCol = adjIndex % numCols;
+
+              if (adjIndex >= 0 &&
+                adjIndex < gridItems.length &&
+                Math.abs(row - adjRow) <= 1 &&
+                Math.abs(col - adjCol) <= 1) {
+                const element = gridItems[adjIndex];
+
+                console.log(`Animating item index: ${adjIndex}, row: ${adjRow}, col: ${adjCol}`);
+
+                // Remove any existing flash animation
+                element.classList.remove('flash');
+
+                // Force reflow to restart animation
+                void element.offsetWidth;
+
+                // Add flash class
+                element.classList.add('flash');
+              }
+            }
+          }
+        });
+      });
+
+      function handleHover() {
+        // Remove active and adjacent classes from all items
+        gridItems.forEach(el => {
+          el.classList.remove('active', 'adjacent');
+        });
+
+        // Add active class to the hovered item
+        this.classList.add('active');
+
+        const index = parseInt(this.dataset.index);
+        const row = Math.floor(index / numCols);
+        const col = index % numCols;
+
+        // Highlight adjacent items (left, right, top, bottom)
+        const adjacentIndices = [
+          index - 1, // Left
+          index + 1, // Right
+          index - numCols, // Top
+          index + numCols  // Bottom
+        ];
+
+        adjacentIndices.forEach(adjIndex => {
+          if (adjIndex >= 0 && adjIndex < gridItems.length) {
+            const adjRow = Math.floor(adjIndex / numCols);
+            const adjCol = adjIndex % numCols;
+
+            // Check if adjacent is on the same row or column (prevents wrapping)
+            if (Math.abs(row - adjRow) <= 1 && Math.abs(col - adjCol) <= 1) {
+              gridItems[adjIndex].classList.add('adjacent');
+            }
+          }
+        });
+      }
+
+      function handleLeave() {
+        // Remove active and adjacent classes when mouse leaves
+        this.classList.remove('active', 'adjacent');
+      }
+    }
+
+    // Initialize grid
+    updateGrid();
+  </script>
+
+</body>
+
+</html>
